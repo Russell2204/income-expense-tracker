@@ -165,8 +165,10 @@ button:hover {
 }
 
 .tab {
+  position: relative;
   background: transparent;
   color: var(--ink);
+  transform-style: preserve-3d;
 }
 
 .tab[aria-selected="true"] {
@@ -174,9 +176,21 @@ button:hover {
   color: #fff;
 }
 
+.tab.is-pressed {
+  animation: tab-press 0.42s ease;
+}
+
+@keyframes tab-press {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  40% { transform: translate3d(0, 3px, -12px) scale(0.94) rotateX(16deg); }
+  100% { transform: translate3d(0, 0, 0) scale(1) rotateX(0); }
+}
+
 .tab-stage {
   position: relative;
   margin-bottom: 1rem;
+  perspective: 1400px;
+  --tab-dir: 1;
 }
 
 .tab-panel {
@@ -186,10 +200,11 @@ button:hover {
 .tab-panel.is-active,
 .tab-panel.is-leaving {
   display: block;
+  transform-style: preserve-3d;
 }
 
 .tab-panel.is-active {
-  animation: tab-in 0.38s ease;
+  animation: tab-in 0.55s cubic-bezier(0.16, 0.84, 0.32, 1);
 }
 
 .tab-panel.is-leaving {
@@ -197,14 +212,14 @@ button:hover {
   top: 0;
   left: 0;
   width: 100%;
-  animation: tab-out 0.32s ease forwards;
+  animation: tab-out 0.42s ease forwards;
   pointer-events: none;
 }
 
 @keyframes tab-in {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translate3d(calc(var(--tab-dir) * 42px), 24px, -110px) rotateY(calc(var(--tab-dir) * -18deg)) rotateX(12deg);
   }
   to {
     opacity: 1;
@@ -219,13 +234,16 @@ button:hover {
   }
   to {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translate3d(calc(var(--tab-dir) * -36px), -18px, -140px) rotateY(calc(var(--tab-dir) * 16deg)) rotateX(-10deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .tab.is-pressed,
   .tab-panel.is-active,
-  .tab-panel.is-leaving {
+  .tab-panel.is-leaving,
+  .tab-panel.is-active .card,
+  .tab-panel.is-active .tx-item {
     animation: none;
   }
 }
@@ -234,6 +252,38 @@ button:hover {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
+  perspective: 1100px;
+}
+
+.tab-panel.is-active .card,
+.tab-panel.is-active .tx-item {
+  animation: lift-3d 0.62s cubic-bezier(0.16, 0.84, 0.32, 1) both;
+}
+
+.tab-panel.is-active .card:nth-child(2),
+.tab-panel.is-active .tx-item:nth-child(2) { animation-delay: 0.07s; }
+
+.tab-panel.is-active .card:nth-child(3),
+.tab-panel.is-active .tx-item:nth-child(3) { animation-delay: 0.14s; }
+
+@keyframes lift-3d {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 28px, -50px) rotateX(34deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card {
+  padding: 1.1rem 1.2rem 1.2rem;
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-6px) rotateX(8deg);
 }
 
 .tabs,
@@ -257,10 +307,6 @@ select,
   border-radius: var(--radius);
 }
 
-.card {
-  padding: 1.1rem 1.2rem 1.2rem;
-}
-
 .card-label {
   margin-bottom: 0.4rem;
   color: var(--muted);
@@ -281,12 +327,17 @@ select,
 
 .chart {
   min-height: 220px;
+  perspective: 900px;
+  padding: 0.4rem 0 1rem;
 }
 
 .chart svg {
   display: block;
   width: 100%;
   height: auto;
+  transform: rotateX(18deg) rotateZ(-1deg);
+  transform-origin: 50% 85%;
+  filter: drop-shadow(14px 22px 12px rgba(28, 25, 21, 0.18));
 }
 
 .chart-donut {
@@ -298,6 +349,8 @@ select,
 
 .chart-donut svg {
   overflow: visible;
+  transform: rotateX(26deg);
+  transform-origin: center;
 }
 
 .legend {

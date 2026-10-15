@@ -186,10 +186,23 @@ listEl.addEventListener("click", (event) => {
   if (button.dataset.action === "delete") removeTransaction(id);
 });
 
+const TAB_ORDER = ["summary", "days", "share", "form", "list", "settings"];
+
 function showTab(name) {
   const next = document.getElementById(`panel-${name}`);
   const current = document.querySelector(".tab-panel.is-active");
   if (!next || next === current) return;
+
+  const from = TAB_ORDER.indexOf(current.id.replace("panel-", ""));
+  const to = TAB_ORDER.indexOf(name);
+  document.querySelector(".tab-stage").style.setProperty("--tab-dir", to >= from ? "1" : "-1");
+
+  const tabBtn = document.querySelector(`.tab[data-tab="${name}"]`);
+  if (tabBtn && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    tabBtn.classList.remove("is-pressed");
+    void tabBtn.offsetWidth;
+    tabBtn.classList.add("is-pressed");
+  }
 
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.setAttribute("aria-selected", String(tab.dataset.tab === name));
@@ -214,6 +227,8 @@ function showTab(name) {
   }
 
   next.hidden = false;
+  next.classList.remove("is-active");
+  void next.offsetWidth;
   next.classList.add("is-active");
 }
 
