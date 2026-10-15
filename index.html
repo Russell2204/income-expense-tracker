@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    try {
+      var savedTheme = JSON.parse(localStorage.getItem("salary-tracker") || "null");
+      if (savedTheme && savedTheme.theme === "dark") document.documentElement.dataset.theme = "dark";
+      if (savedTheme && savedTheme.lang === "uz") document.documentElement.lang = "uz";
+    } catch (error) {}
+  </script>
+  <title>Трекер доходов и расходов</title>
+  <link rel="stylesheet" href="main.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow" data-i18n="eyebrow">Личные финансы</p>
+        <h1 data-i18n="appTitle">Трекер доходов и расходов</h1>
+      </div>
+      <div class="month-nav" data-i18n-aria="monthNav" aria-label="Выбор месяца">
+        <button type="button" id="prev-month" data-i18n-aria="prevMonth" aria-label="Предыдущий месяц">←</button>
+        <p id="month-label" class="month-label"></p>
+        <button type="button" id="next-month" data-i18n-aria="nextMonth" aria-label="Следующий месяц">→</button>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist" data-i18n-aria="sections" aria-label="Разделы">
+      <button type="button" class="tab" role="tab" id="tab-summary" data-tab="summary" data-i18n="tabSummary" aria-controls="panel-summary" aria-selected="true">Итоги</button>
+      <button type="button" class="tab" role="tab" id="tab-days" data-tab="days" data-i18n="tabDays" aria-controls="panel-days" aria-selected="false">По дням</button>
+      <button type="button" class="tab" role="tab" id="tab-share" data-tab="share" data-i18n="tabShare" aria-controls="panel-share" aria-selected="false">Доли</button>
+      <button type="button" class="tab" role="tab" id="tab-form" data-tab="form" data-i18n="tabForm" aria-controls="panel-form" aria-selected="false">Операция</button>
+      <button type="button" class="tab" role="tab" id="tab-list" data-tab="list" data-i18n="tabList" aria-controls="panel-list" aria-selected="false">Список</button>
+      <button type="button" class="tab" role="tab" id="tab-settings" data-tab="settings" data-i18n="tabSettings" aria-controls="panel-settings" aria-selected="false">Настройки</button>
+    </nav>
+
+    <div class="tab-stage">
+      <section id="panel-summary" class="tab-panel is-active" role="tabpanel" aria-labelledby="tab-summary">
+        <div class="cards" data-i18n-aria="monthTotals" aria-label="Итоги месяца">
+          <article class="card card-income">
+            <p class="card-label" data-i18n="income">Доход</p>
+            <p id="income-total" class="card-value">0</p>
+          </article>
+          <article class="card card-expense">
+            <p class="card-label" data-i18n="expense">Расход</p>
+            <p id="expense-total" class="card-value">0</p>
+          </article>
+          <article class="card card-balance">
+            <p class="card-label" data-i18n="balance">Баланс</p>
+            <p id="balance-total" class="card-value">0</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="panel-days" class="tab-panel" role="tabpanel" aria-labelledby="tab-days" hidden>
+        <article class="panel">
+          <h2 data-i18n="daysTitle">По дням месяца</h2>
+          <div id="bar-chart" class="chart"></div>
+          <div class="legend">
+            <span class="legend-income" data-i18n="income">Доход</span>
+            <span class="legend-expense" data-i18n="expense">Расход</span>
+          </div>
+        </article>
+      </section>
+
+      <section id="panel-share" class="tab-panel" role="tabpanel" aria-labelledby="tab-share" hidden>
+        <article class="panel">
+          <h2 data-i18n="shareTitle">Доля дохода и расхода</h2>
+          <div id="donut-chart" class="chart chart-donut"></div>
+        </article>
+      </section>
+
+      <section id="panel-form" class="tab-panel" role="tabpanel" aria-labelledby="tab-form" hidden>
+        <form id="tx-form" class="panel form" novalidate>
+          <h2 id="form-title">Новая операция</h2>
+          <label>
+            <span data-i18n="type">Тип</span>
+            <select id="tx-type" name="type" required>
+              <option value="income" data-i18n="income">Доход</option>
+              <option value="expense" data-i18n="expense">Расход</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="name">Название</span>
+            <input id="tx-title" name="title" type="text" maxlength="80" required data-i18n-placeholder="titlePlaceholder" placeholder="Зарплата, продукты…">
+          </label>
+          <label>
+            <span data-i18n="amount">Сумма</span>
+            <input id="tx-amount" name="amount" type="number" min="0.01" step="0.01" required placeholder="0">
+          </label>
+          <label>
+            <span data-i18n="date">Дата</span>
+            <input id="tx-date" name="date" type="date" required>
+          </label>
+          <p id="form-error" class="form-error" role="alert" hidden></p>
+          <div class="form-actions">
+            <button type="submit" id="submit-btn">Добавить</button>
+            <button type="button" id="cancel-btn" data-i18n="cancel" hidden>Отмена</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="panel-list" class="tab-panel" role="tabpanel" aria-labelledby="tab-list" hidden>
+        <section class="panel list-panel">
+          <h2 data-i18n="operations">Операции</h2>
+          <ul id="tx-list" class="tx-list"></ul>
+          <p id="empty-state" class="empty" data-i18n="empty" hidden>В этом месяце операций пока нет.</p>
+        </section>
+      </section>
+
+      <section id="panel-settings" class="tab-panel" role="tabpanel" aria-labelledby="tab-settings" hidden>
+        <section class="panel settings">
+          <h2 data-i18n="tabSettings">Настройки</h2>
+          <div class="theme-switch" role="group" data-i18n-aria="themeGroup" aria-label="Тема оформления">
+            <span data-i18n="theme">Тема</span>
+            <button type="button" id="theme-light" data-i18n="light" aria-pressed="true">Светлая</button>
+            <button type="button" id="theme-dark" data-i18n="dark" aria-pressed="false">Тёмная</button>
+          </div>
+          <div class="theme-switch lang-switch" role="group" data-i18n-aria="languageGroup" aria-label="Язык">
+            <span data-i18n="language">Язык</span>
+            <button type="button" id="lang-ru" aria-pressed="true">Русский</button>
+            <button type="button" id="lang-uz" aria-pressed="false">Oʻzbekcha</button>
+          </div>
+          <form id="settings-form" class="settings-form">
+            <label>
+              <span data-i18n="currency">Валюта</span>
+              <input id="currency-input" name="currency" type="text" maxlength="12" required value="сум">
+            </label>
+            <button type="submit" id="save-currency" data-i18n="saveCurrency">Сохранить валюту</button>
+            <p id="settings-note" class="settings-note" data-i18n="currencySaved" role="status" hidden>Валюта сохранена.</p>
+          </form>
+        </section>
+      </section>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
