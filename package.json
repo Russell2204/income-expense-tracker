@@ -1,0 +1,12 @@
+{
+  "name": "income-expense-tracker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "bcryptjs": "^3.0.2"
+  }
+}

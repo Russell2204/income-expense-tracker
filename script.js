@@ -48,7 +48,21 @@ const MESSAGES = {
     delete: "Удалить",
     total: "всего",
     noData: "Нет данных",
-    barLabel: "Доход и расход по дням"
+    barLabel: "Доход и расход по дням",
+    authLogin: "Вход",
+    authRegister: "Регистрация",
+    authName: "Имя",
+    authEmail: "Почта",
+    authPassword: "Пароль",
+    authSubmitLogin: "Войти",
+    authSubmitRegister: "Создать аккаунт",
+    authSwitchToRegister: "Нет аккаунта? Зарегистрироваться",
+    authSwitchToLogin: "Уже есть аккаунт? Войти",
+    authInvalid: "Проверьте почту и пароль. Пароль должен быть не короче 8 символов.",
+    authExists: "Такая почта уже зарегистрирована.",
+    saveFailed: "Не удалось сохранить. Попробуйте ещё раз.",
+    account: "Аккаунт",
+    logout: "Выйти",
   },
   uz: {
     eyebrow: "Shaxsiy moliya",
@@ -96,7 +110,21 @@ const MESSAGES = {
     delete: "O'chirish",
     total: "jami",
     noData: "Ma'lumot yo'q",
-    barLabel: "Kunlar bo'yicha daromad va xarajat"
+    barLabel: "Kunlar bo'yicha daromad va xarajat",
+    authLogin: "Kirish",
+    authRegister: "Ro'yxatdan o'tish",
+    authName: "Ism",
+    authEmail: "Pochta",
+    authPassword: "Parol",
+    authSubmitLogin: "Kirish",
+    authSubmitRegister: "Akkaunt yaratish",
+    authSwitchToRegister: "Akkaunt yo'qmi? Ro'yxatdan o'ting",
+    authSwitchToLogin: "Akkaunt bormi? Kiring",
+    authInvalid: "Pochta va parolni tekshiring. Parol kamida 8 ta belgidan iborat bo'lsin.",
+    authExists: "Bu pochta allaqachon ro'yxatdan o'tgan.",
+    saveFailed: "Saqlab bo'lmadi. Qayta urinib ko'ring.",
+    account: "Akkaunt",
+    logout: "Chiqish",
   }
 };
 
@@ -128,24 +156,42 @@ const langUzBtn = document.getElementById("lang-uz");
 const state = loadState();
 let view = currentMonthDate();
 let editingId = null;
+let authMode = "login";
+
+const authScreen = document.getElementById("auth-screen");
+const appShell = document.getElementById("app-shell");
+const authForm = document.getElementById("auth-form");
+const authTitle = document.getElementById("auth-title");
+const authNameLabel = document.getElementById("auth-name-label");
+const authName = document.getElementById("auth-name");
+const authEmail = document.getElementById("auth-email");
+const authPassword = document.getElementById("auth-password");
+const authError = document.getElementById("auth-error");
+const authSubmit = document.getElementById("auth-submit");
+const authSwitch = document.getElementById("auth-switch");
+const accountEmail = document.getElementById("account-email");
 
 currencyInput.value = state.currency;
 dateInput.value = todayString();
 applyTheme();
 applyLanguage();
+boot();
 
 document.getElementById("prev-month").addEventListener("click", () => shiftMonth(-1));
 document.getElementById("next-month").addEventListener("click", () => shiftMonth(1));
 
-form.addEventListener("submit", (event) => {
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const draft = readForm();
   if (!draft) return;
 
-  if (editingId) {
-    updateTransaction(editingId, draft);
-  } else {
-    createTransaction(draft);
+  try {
+    if (editingId) await updateTransaction(editingId, draft);
+    else await createTransaction(draft);
+  } catch {
+    formError.textContent = t("saveFailed");
+    formError.hidden = false;
+    return;
   }
   resetForm();
   render();
@@ -166,10 +212,45 @@ settingsForm.addEventListener("submit", (event) => {
   const currency = currencyInput.value.trim();
   if (!currency) return;
   state.currency = currency;
-  saveState();
+  persistSettings();
   currencyInput.value = currency;
   settingsNote.hidden = false;
   render();
+});
+
+authForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  authError.hidden = true;
+  const body = {
+    email: authEmail.value.trim(),
+    password: authPassword.value,
+    name: authName.value.trim()
+  };
+  try {
+    const path = authMode === "register" ? "/api/auth/register" : "/api/auth/login";
+    const result = await api(path, { method: "POST", body });
+    authForm.reset();
+    await enterApp(result.user);
+  } catch (error) {
+    authError.textContent = error.status === 409 ? t("authExists") : t("authInvalid");
+    authError.hidden = false;
+  }
+});
+
+authSwitch.addEventListener("click", () => {
+  authMode = authMode === "login" ? "register" : "login";
+  authError.hidden = true;
+  applyLanguage();
+});
+
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  await api("/api/auth/logout", { method: "POST" });
+  state.transactions = [];
+  state.user = null;
+  appShell.hidden = true;
+  authScreen.hidden = false;
+  authMode = "login";
+  applyLanguage();
 });
 
 document.querySelector(".tabs").addEventListener("click", (event) => {
@@ -266,7 +347,7 @@ function formatMonth(date) {
 
 function setLanguage(lang) {
   state.lang = lang === "uz" ? "uz" : "ru";
-  saveState();
+  if (state.user) persistSettings();
   applyLanguage();
 }
 
@@ -289,13 +370,18 @@ function applyLanguage() {
   });
   formTitle.textContent = editingId ? t("editTitle") : t("newTitle");
   submitBtn.textContent = editingId ? t("save") : t("add");
+  authTitle.textContent = t(authMode === "register" ? "authRegister" : "authLogin");
+  authSubmit.textContent = t(authMode === "register" ? "authSubmitRegister" : "authSubmitLogin");
+  authSwitch.textContent = t(authMode === "register" ? "authSwitchToLogin" : "authSwitchToRegister");
+  authNameLabel.hidden = authMode !== "register";
+  authName.required = authMode === "register";
   if (!formError.hidden) formError.textContent = t("formError");
   render();
 }
 
 function setTheme(theme) {
   state.theme = theme === "dark" ? "dark" : "light";
-  saveState();
+  if (state.user) persistSettings();
   applyTheme();
   render();
 }
@@ -311,32 +397,106 @@ function themeColor(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-function createTransaction(draft) {
-  state.transactions.push({
-    id: crypto.randomUUID(),
-    ...draft
+async function api(path, options = {}) {
+  const response = await fetch(path, {
+    method: options.method || "GET",
+    credentials: "same-origin",
+    headers: options.body ? { "Content-Type": "application/json" } : undefined,
+    body: options.body ? JSON.stringify(options.body) : undefined
   });
-  saveState();
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data.error || "request");
+    error.status = response.status;
+    throw error;
+  }
+  return data;
 }
 
-function updateTransaction(id, draft) {
+async function boot() {
+  try {
+    const me = await api("/api/auth/me");
+    if (!me.user) throw new Error("auth");
+    await enterApp(me.user);
+  } catch {
+    appShell.hidden = true;
+    authScreen.hidden = false;
+  }
+}
+
+async function enterApp(user) {
+  state.user = user;
+  const [settingsResult, transactionResult] = await Promise.all([
+    api("/api/settings"),
+    api("/api/transactions")
+  ]);
+  state.currency = settingsResult.settings.currency;
+  state.theme = settingsResult.settings.theme;
+  state.lang = settingsResult.settings.lang;
+  state.transactions = transactionResult.transactions;
+  if (!state.transactions.length) await importLocalTransactions();
+  accountEmail.textContent = user.email;
+  currencyInput.value = state.currency;
+  authScreen.hidden = true;
+  appShell.hidden = false;
+  applyTheme();
+  applyLanguage();
+}
+
+async function importLocalTransactions() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    const items = Array.isArray(data.transactions) ? data.transactions : [];
+    for (const item of items) {
+      if (!item.title || !item.date || !(Number(item.amount) > 0)) continue;
+      const result = await api("/api/transactions", {
+        method: "POST",
+        body: {
+          type: item.type === "expense" ? "expense" : "income",
+          title: item.title,
+          amount: Number(item.amount),
+          date: item.date
+        }
+      });
+      state.transactions.push(result.transaction);
+    }
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+async function persistSettings() {
+  await api("/api/settings", {
+    method: "PUT",
+    body: { currency: state.currency, theme: state.theme, lang: state.lang }
+  });
+}
+
+function saveState() {
+  return persistSettings();
+}
+
+async function createTransaction(draft) {
+  const result = await api("/api/transactions", { method: "POST", body: draft });
+  state.transactions.push(result.transaction);
+}
+
+async function updateTransaction(id, draft) {
+  const result = await api("/api/transactions", { method: "PUT", body: { id, ...draft } });
   const index = state.transactions.findIndex((item) => item.id === id);
-  if (index === -1) return;
-  state.transactions[index] = { ...state.transactions[index], ...draft };
-  saveState();
+  if (index !== -1) state.transactions[index] = result.transaction;
 }
 
-function removeTransaction(id) {
+async function removeTransaction(id) {
   const item = state.transactions.find((entry) => entry.id === id);
   if (!item) return;
   if (!confirm(t("deleteConfirm").replace("{title}", item.title))) return;
+  await api(`/api/transactions?id=${encodeURIComponent(id)}`, { method: "DELETE" });
   state.transactions = state.transactions.filter((entry) => entry.id !== id);
   if (editingId === id) resetForm();
-  saveState();
   render();
 }
 

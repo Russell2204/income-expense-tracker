@@ -1,0 +1,11 @@
+node_modules
+.vercel
+.env
+.env.local
+.neon-cs.json
+.database-url
+.session-secret
+check-db.mjs
+migrate.mjs
+schema.sql
+.env*

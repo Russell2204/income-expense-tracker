@@ -386,6 +386,10 @@ label {
   font-size: 0.92rem;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 input,
 select {
   width: 100%;
@@ -481,8 +485,32 @@ select:focus {
   gap: 0.5rem;
 }
 
-.lang-switch {
-  margin-top: 0.85rem;
+.auth-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.auth-screen {
+  width: min(28rem, 100%);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.auth-screen h1 {
+  font-size: 1.8rem;
+}
+
+.account-line {
+  margin: 1rem 0 0.75rem;
+  color: var(--muted);
+}
+
+#logout-btn,
+#auth-switch {
+  background: var(--field);
+  color: var(--ink);
 }
 
 .theme-switch button {
